@@ -73,7 +73,7 @@ def compare(result, wanted) -> bool:
     for r, w in zip(result, wanted):
         wanted_re = re.escape(w.strip())
         wanted_re = wanted_re.replace("\\.\\.\\.", ".*?")
-        wanted_re = "^%s$" % wanted_re
+        wanted_re = f"^{wanted_re}$"
         if not re.match(wanted_re, r.strip()):
             return False
     return True
@@ -121,7 +121,7 @@ def test_case(test, tests, index=0, subindex=0, quiet=False, section=None) -> bo
             out = result.out
             result = result.result
     except Exception as exc:
-        fail("Exception %s" % exc)
+        fail(f"Exception {exc}")
         info = sys.exc_info()
         sys.excepthook(*info)
         return False
@@ -149,17 +149,22 @@ def test_case(test, tests, index=0, subindex=0, quiet=False, section=None) -> bo
     else:
         # Need to check all output line by line
         for got, wanted in zip(out, wanted_out):
-            if not got == wanted:
+            if got != wanted:
                 output_ok = False
                 break
     if check_partial_enlapsed_time:
         print("   comparing messages took ", datetime.now() - time_comparing)
-    if not output_ok:
-        return fail(
+    return (
+        True
+        if output_ok
+        else fail(
             "Output:\n%s\nWanted:\n%s"
-            % ("\n".join(str(o) for o in out), "\n".join(str(o) for o in wanted_out))
+            % (
+                "\n".join(str(o) for o in out),
+                "\n".join(str(o) for o in wanted_out),
+            )
         )
-    return True
+    )
 
 
 def test_tests(
@@ -214,10 +219,7 @@ def create_output(tests, doc_data, format="xml"):
             result = evaluation.parse_evaluate(test.test)
         except:
             result = None
-        if result is None:
-            result = []
-        else:
-            result = [result.get_data()]
+        result = [] if result is None else [result.get_data()]
         doc_data[key] = {
             "query": test.test,
             "results": result,
@@ -275,7 +277,7 @@ def test_sections(
     index = 0
     section_names = ", ".join(sections)
     print(f"Testing section(s): {section_names}")
-    sections |= {"$" + s for s in sections}
+    sections |= {f"${s}" for s in sections}
     output_data = load_doc_data() if reload else {}
     prev_key = []
     for tests in documentation.get_tests():
@@ -284,7 +286,7 @@ def test_sections(
                 key = list(test.key)[1:-1]
                 if prev_key != key:
                     prev_key = key
-                    print(f'Testing section: {" / ".join(key)}')
+                    print(f'Testing section: {" / ".join(prev_key)}')
                     index = 0
                 if test.ignore:
                     continue
@@ -377,7 +379,7 @@ def test_all(
             print_and_log("(not all tests are accounted for due to --stop-on-failure)")
         print_and_log("Failed:")
         for part, chapter, section in sorted(failed_symbols):
-            print_and_log("  - %s in %s / %s" % (section, part, chapter))
+            print_and_log(f"  - {section} in {part} / {chapter}")
 
     if generate_output and (failed == 0 or doc_even_if_error):
         save_doc_data(output_data)
@@ -436,8 +438,12 @@ def main():
         "--help", "-h", help="show this help message and exit", action="help"
     )
     parser.add_argument(
-        "--version", "-v", action="version", version="%(prog)s " + mathics.__version__
+        "--version",
+        "-v",
+        action="version",
+        version=f"%(prog)s {mathics.__version__}",
     )
+
     parser.add_argument(
         "--chapters",
         "-c",
@@ -565,31 +571,29 @@ def main():
         test_chapters(
             chapters, stop_on_failure=args.stop_on_failure, reload=args.reload
         )
+    elif args.pymathics:
+        print("Building pymathics documentation object")
+        documentation.load_pymathics_doc()
+    elif args.doc_only:
+        extract_doc_from_source(
+            quiet=args.quiet,
+            reload=args.reload,
+        )
     else:
-        # if we want to check also the pymathics modules
-        if args.pymathics:
-            print("Building pymathics documentation object")
-            documentation.load_pymathics_doc()
-        elif args.doc_only:
-            extract_doc_from_source(
-                quiet=args.quiet,
-                reload=args.reload,
-            )
-        else:
-            excludes = set(args.exclude.split(","))
-            start_at = args.skip + 1
-            start_time = datetime.now()
-            test_all(
-                quiet=args.quiet,
-                generate_output=args.output,
-                stop_on_failure=args.stop_on_failure,
-                start_at=start_at,
-                count=args.count,
-                doc_even_if_error=args.keep_going,
-                excludes=excludes,
-            )
-            end_time = datetime.now()
-            print("Tests took ", end_time - start_time)
+        excludes = set(args.exclude.split(","))
+        start_at = args.skip + 1
+        start_time = datetime.now()
+        test_all(
+            quiet=args.quiet,
+            generate_output=args.output,
+            stop_on_failure=args.stop_on_failure,
+            start_at=start_at,
+            count=args.count,
+            doc_even_if_error=args.keep_going,
+            excludes=excludes,
+        )
+        end_time = datetime.now()
+        print("Tests took ", end_time - start_time)
     if logfile:
         logfile.close()
 

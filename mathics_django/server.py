@@ -24,10 +24,10 @@ def check_database():
     if not osp.exists(database_file):
         print("warning: database file %s not found\n" % database_file)
         if not osp.exists(DATA_DIR):
-            print("Creating data directory %s" % DATA_DIR)
+            print(f"Creating data directory {DATA_DIR}")
             os.makedirs(DATA_DIR)
 
-    print("Migrating database %s" % database_file)
+    print(f"Migrating database {database_file}")
     manage_file = osp.join(osp.dirname(osp.realpath(__file__)), "manage.py")
     try:
         subprocess.check_call([sys.executable, manage_file, "migrate", "--noinput"])
@@ -60,9 +60,9 @@ def parse_args():
         "--version",
         "-v",
         action="version",
-        version="Mathics: %s;, mathicsserver: %s."
-        % (mathics.__version__, django_frontend_version),
+        version=f"Mathics: {mathics.__version__};, mathicsserver: {django_frontend_version}.",
     )
+
     argparser.add_argument(
         "--port",
         "-p",
@@ -84,16 +84,16 @@ def parse_args():
 
 
 def launch_app(args):
-    quit_command = "CTRL-BREAK" if sys.platform == "win32" else "CONTROL-C"
     port = args.port
 
     if not args.quiet:
         print()
-        print("Django front end version %s" % django_frontend_version)
+        print(f"Django front end version {django_frontend_version}")
         print(server_version_string)
         print()
         print(license_string)
         print()
+        quit_command = "CTRL-BREAK" if sys.platform == "win32" else "CONTROL-C"
         print("Quit by pressing %s\n" % quit_command)
         print(
             """Open the graphical user interface at
@@ -101,11 +101,7 @@ http://localhost:%d\nin Firefox, Chrome, or Safari to use Mathics\n"""
             % port
         )
 
-    if args.external:
-        addr = "0.0.0.0"
-    else:
-        addr = "127.0.0.1"
-
+    addr = "0.0.0.0" if args.external else "127.0.0.1"
     try:
         from django.core.servers.basehttp import run, get_internal_wsgi_application
 
@@ -122,7 +118,7 @@ http://localhost:%d\nin Firefox, Chrome, or Safari to use Mathics\n"""
             error_text = ERRORS[e.errno]
         except KeyError:
             error_text = str(e)
-        sys.stderr.write("Error: %s" % error_text + "\n")
+        sys.stderr.write(f"Error: {error_text}" + "\n")
         # Need to use an OS exit because sys.exit doesn't work in a thread
         os._exit(1)
     except KeyboardInterrupt:

@@ -6,10 +6,11 @@ from django import forms
 
 class AjaxForm(forms.Form):
     def as_json(self, general_errors=[]):
-        field_errors = dict(
-            (key, [str(error) for error in errors])
+        field_errors = {
+            key: [str(error) for error in errors]
             for key, errors in self.errors.items()
-        )
+        }
+
         gen_errors = general_errors + self.non_field_errors()
         result = {}
         if field_errors:

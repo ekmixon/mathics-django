@@ -109,10 +109,10 @@ class initialize(Command):
         )
 
         database_file = settings["DATABASES"]["default"]["NAME"]
-        print("Creating data directory %s" % settings["DATA_DIR"])
+        print(f'Creating data directory {settings["DATA_DIR"]}')
         if not osp.exists(settings["DATA_DIR"]):
             os.makedirs(settings["DATA_DIR"])
-        print("Creating database %s" % database_file)
+        print(f"Creating database {database_file}")
         try:
             subprocess.check_call(
                 [sys.executable, "mathics_django/manage.py", "migrate", "--noinput"]

@@ -63,7 +63,7 @@ def escape_html(text, verbatim_mode=False, counters=None, single_line=False):
     if not verbatim_mode:
 
         def repl_quotation(match):
-            return r"&ldquo;%s&rdquo;" % match.group(1)
+            return f"&ldquo;{match.group(1)}&rdquo;"
 
         text = QUOTATIONS_RE.sub(repl_quotation, text)
 
@@ -74,11 +74,7 @@ def escape_html(text, verbatim_mode=False, counters=None, single_line=False):
     if not verbatim_mode:
 
         def repl_latex(match):
-            return "%s<var>%s</var>%s" % (
-                match.group(1),
-                match.group(2),
-                match.group(3),
-            )
+            return f"{match.group(1)}<var>{match.group(2)}</var>{match.group(3)}"
 
         text = LATEX_RE.sub(repl_latex, text)
 
@@ -86,36 +82,33 @@ def escape_html(text, verbatim_mode=False, counters=None, single_line=False):
             text = match.group(1)
             text = text.replace("\\'", "'")
             text = text.replace(" ", "&nbsp;")
-            if text:
-                return "<code>%s</code>" % text
-            else:
-                return "'"
+            return f"<code>{text}</code>" if text else "'"
 
         def repl_allowed(match):
             content = _replace_all(
                 match.group(1), [("&ldquo;", '"'), ("&rdquo;", '"'), ("&quot;", '"')]
             )
-            return "<%s>" % content
+            return f"<{content}>"
 
         text = MATHICS_RE.sub(repl_mathics, text)
         for allowed in ALLOWED_TAGS:
             text = ALLOWED_TAGS_RE[allowed].sub(repl_allowed, text)
-            text = text.replace("&lt;/%s&gt;" % allowed, "</%s>" % allowed)
+            text = text.replace(f"&lt;/{allowed}&gt;", f"</{allowed}>")
 
         def repl_dl(match):
             text = match.group(1)
             text = DL_ITEM_RE.sub(
                 lambda m: "<%(tag)s>%(content)s</%(tag)s>\n" % m.groupdict(), text
             )
-            return "<dl>%s</dl>" % text
+            return f"<dl>{text}</dl>"
 
         text = DL_RE.sub(repl_dl, text)
 
         def repl_list(match):
             tag = match.group("tag")
             content = match.group("content")
-            content = LIST_ITEM_RE.sub(lambda m: "<li>%s</li>" % m.group(1), content)
-            return "<%s>%s</%s>" % (tag, content, tag)
+            content = LIST_ITEM_RE.sub(lambda m: f"<li>{m.group(1)}</li>", content)
+            return f"<{tag}>{content}</{tag}>"
 
         text = LIST_RE.sub(repl_list, text)
 
@@ -123,7 +116,7 @@ def escape_html(text, verbatim_mode=False, counters=None, single_line=False):
             tag = match.group("tag")
             content = match.group("content")
             if tag == "em":
-                return r"<em>%s</em>" % content
+                return f"<em>{content}</em>"
             elif tag == "url":
                 return r'<a href="%s">%s</a>' % (content, content)
 
@@ -180,7 +173,7 @@ def escape_html(text, verbatim_mode=False, counters=None, single_line=False):
         text = text.replace("\\'", "'")
     else:
         text = text.replace(" ", "&nbsp;")
-        text = "<code>%s</code>" % text
+        text = f"<code>{text}</code>"
     text = text.replace("'", "&#39;")
     text = text.replace("---", "&mdash;")
     for key, (xml, tex) in SPECIAL_COMMANDS.items():

@@ -45,7 +45,7 @@ def format_output(obj, expr, format=None):
         format = obj.format
 
     if isinstance(format, dict):
-        return dict((k, obj.format_output(expr, f)) for k, f in format.items())
+        return {k: obj.format_output(expr, f) for k, f in format.items()}
 
     # For some expressions, we want formatting to be different.
     # In particular for FullForm output, we dont' want MathML, we want
@@ -222,18 +222,18 @@ def hierarchy_pos(
             root = random.choice(list(G.nodes))
 
     def _hierarchy_pos(
-        G,
-        root,
-        leftmost,
-        width,
-        leafdx=0.2,
-        vert_gap=0.2,
-        vert_loc=0,
-        xcenter=0.5,
-        rootpos=None,
-        leafpos=None,
-        parent=None,
-    ):
+            G,
+            root,
+            leftmost,
+            width,
+            leafdx=0.2,
+            vert_gap=0.2,
+            vert_loc=0,
+            xcenter=0.5,
+            rootpos=None,
+            leafpos=None,
+            parent=None,
+        ):
         """
         see hierarchy_pos docstring for most arguments
 
@@ -253,7 +253,7 @@ def hierarchy_pos(
         leaf_count = 0
         if not isinstance(G, nx.DiGraph) and parent is not None:
             children.remove(parent)
-        if len(children) != 0:
+        if children:
             rootdx = width / len(children)
             nextx = xcenter - width / 2 - rootdx / 2
             for child in children:
@@ -321,7 +321,7 @@ def hierarchy_pos(
         y_list[y].add(x)
 
     min_sep = xmax
-    for y in y_list.keys():
+    for y in y_list:
         x_list = sorted(y_list[y])
         n = len(x_list) - 1
         if n <= 0:
@@ -366,9 +366,7 @@ LAYOUT_DENSITY_EXPONENT = {"circular": 0.9, "spiral_equidistant": 0.7, "spiral":
 def clamp(value, min=-math.inf, max=math.inf):
     if value <= min:
         return min
-    if value >= max:
-        return max
-    return value
+    return max if value >= max else value
 
 
 DEFAULT_NODE_SIZE = 300.0

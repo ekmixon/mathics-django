@@ -48,11 +48,7 @@ from mathics.settings import default_pymathics_modules, TIMEOUT
 
 documentation.load_pymathics_doc()
 
-if settings.DEBUG:
-    JSON_CONTENT_TYPE = "text/html"
-else:
-    JSON_CONTENT_TYPE = "application/json"
-
+JSON_CONTENT_TYPE = "text/html" if settings.DEBUG else "application/json"
 mathics_threejs_backend_data = {}
 
 
@@ -151,19 +147,19 @@ def doc_part(request, part, ajax=""):
     * Manual
     * Reference of Built-in Symbols
     """
-    part = documentation.get_part(part)
-    if not part:
+    if part := documentation.get_part(part):
+        return render_doc(
+            request,
+            "part.html",
+            {
+                "title": part.get_title_html(),
+                "part": part,
+                "object": part,
+            },
+            ajax=ajax,
+        )
+    else:
         raise Http404
-    return render_doc(
-        request,
-        "part.html",
-        {
-            "title": part.get_title_html(),
-            "part": part,
-            "object": part,
-        },
-        ajax=ajax,
-    )
 
 
 def doc_chapter(request, part, chapter, ajax=""):
@@ -172,19 +168,19 @@ def doc_chapter(request, part, chapter, ajax=""):
     * Introduction (in part Manual)
     * Procedural Programming (in part Reference of Built-in Symbols)
     """
-    chapter = documentation.get_chapter(part, chapter)
-    if not chapter:
+    if chapter := documentation.get_chapter(part, chapter):
+        return render_doc(
+            request,
+            "chapter.html",
+            {
+                "title": chapter.get_title_html(),
+                "chapter": chapter,
+                "object": chapter,
+            },
+            ajax=ajax,
+        )
+    else:
         raise Http404
-    return render_doc(
-        request,
-        "chapter.html",
-        {
-            "title": chapter.get_title_html(),
-            "chapter": chapter,
-            "object": chapter,
-        },
-        ajax=ajax,
-    )
 
 
 def doc_section(
@@ -333,9 +329,8 @@ def get_MathJax_version():
         "MathJax.js",
     )
     pattern = r'MathJax.version="(\d\.\d\.\d)"'
-    match = re.search(pattern, builtin_open(three_file).read())
-    if match:
-        return match.group(1)
+    if match := re.search(pattern, builtin_open(three_file).read()):
+        return match[1]
     else:
         return "?.?.?"
 
@@ -376,7 +371,7 @@ def get_user_settings(evaluation):
         rule = evaluation.parse(setting_name)
         value = rule.evaluate(evaluation).to_python()
 
-        setting_usage_expr = evaluation.parse(setting_name + "::usage")
+        setting_usage_expr = evaluation.parse(f"{setting_name}::usage")
         setting_usage = setting_usage_expr.evaluate(evaluation).to_python(
             string_quotes=False
         )
@@ -394,15 +389,14 @@ def get_user_settings(evaluation):
 def get_worksheets(request):
     if settings.REQUIRE_LOGIN and not is_authenticated(request.user):
         result = []
+    elif is_authenticated(request.user):
+        result = list(request.user.worksheets.order_by("name").values("name"))
     else:
-        if is_authenticated(request.user):
-            result = list(request.user.worksheets.order_by("name").values("name"))
-        else:
-            result = list(
-                Worksheet.objects.filter(user__isnull=True)
-                .order_by("name")
-                .values("name")
-            )
+        result = list(
+            Worksheet.objects.filter(user__isnull=True)
+            .order_by("name")
+            .values("name")
+        )
     return JsonResponse(
         {
             "worksheets": result,
@@ -424,8 +418,7 @@ def login(request):
     general_errors = []
     if form.is_valid():
         email = form.cleaned_data["email"]
-        password = form.cleaned_data["password"]
-        if password:
+        if password := form.cleaned_data["password"]:
             user = auth.authenticate(username=email, password=password)
             if user is None:
                 general_errors = ["Invalid username and/or password."]
@@ -527,7 +520,7 @@ def nicepass(alpha=6, numeric=2):
     mid = n_part(numeric)
     end = a_part(lpl)
 
-    return "%s%s%s" % (start, mid, end)
+    return f"{start}{mid}{end}"
 
 
 def open(request):
@@ -598,13 +591,12 @@ def query(request):
         )
         evaluation.definitions = definitions
     except Exception as exc:
-        if settings.DEBUG and settings.DISPLAY_EXCEPTIONS:
-            info = traceback.format_exception(*sys.exc_info())
-            info = "\n".join(info)
-            msg = "Exception raised: %s\n\n%s" % (exc, info)
-            results.append(Result([Message("System", "exception", msg)], None, None))
-        else:
+        if not settings.DEBUG or not settings.DISPLAY_EXCEPTIONS:
             raise
+        info = traceback.format_exception(*sys.exc_info())
+        info = "\n".join(info)
+        msg = "Exception raised: %s\n\n%s" % (exc, info)
+        results.append(Result([Message("System", "exception", msg)], None, None))
     result = {
         "results": [result.get_data() for result in results],
     }
@@ -673,7 +665,7 @@ def render_doc(request, template_name, context, data=None, ajax: str = ""):
             }
         )
 
-    result = render(request, "doc/%s" % template_name, context)
+    result = render(request, f"doc/{template_name}", context)
     if not ajax:
         return result
 

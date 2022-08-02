@@ -74,7 +74,7 @@ class DjangoDocElement(object):
         if ajax:
             return "javascript:loadDoc('%s')" % self.get_uri()
         else:
-            return "/doc%s" % self.get_uri()
+            return f"/doc{self.get_uri()}"
 
     def get_prev(self):
         return self.get_prev_next()[0]
@@ -104,26 +104,20 @@ class Documentation(DjangoDocElement):
         return self.parts_by_slug.get(part_slug)
 
     def get_chapter(self, part_slug, chapter_slug):
-        part = self.parts_by_slug.get(part_slug)
-        if part:
+        if part := self.parts_by_slug.get(part_slug):
             return part.chapters_by_slug.get(chapter_slug)
         return None
 
     def get_section(self, part_slug, chapter_slug, section_slug):
-        part = self.parts_by_slug.get(part_slug)
-        if part:
-            chapter = part.chapters_by_slug.get(chapter_slug)
-            if chapter:
+        if part := self.parts_by_slug.get(part_slug):
+            if chapter := part.chapters_by_slug.get(chapter_slug):
                 return chapter.sections_by_slug.get(section_slug)
         return None
 
     def get_subsection(self, part_slug, chapter_slug, section_slug, subsection_slug):
-        part = self.parts_by_slug.get(part_slug)
-        if part:
-            chapter = part.chapters_by_slug.get(chapter_slug)
-            if chapter:
-                section = chapter.sections_by_slug.get(section_slug)
-                if section:
+        if part := self.parts_by_slug.get(part_slug):
+            if chapter := part.chapters_by_slug.get(chapter_slug):
+                if section := chapter.sections_by_slug.get(section_slug):
                     return section.subsections_by_slug.get(subsection_slug)
 
         return None
@@ -131,8 +125,7 @@ class Documentation(DjangoDocElement):
     def get_tests(self):
         for part in self.parts:
             for chapter in part.chapters:
-                tests = chapter.doc.get_tests()
-                if tests:
+                if tests := chapter.doc.get_tests():
                     yield Tests(part.title, chapter.title, "", tests)
                 for section in chapter.sections:
                     if section.installed:
@@ -159,18 +152,10 @@ class Documentation(DjangoDocElement):
                                             docsubsection.title,
                                             doctest_list,
                                         )
-                        else:
-                            tests = section.doc.get_tests()
-                            if tests:
-                                yield Tests(
-                                    part.title, chapter.title, section.title, tests
-                                )
-                                pass
-                            pass
-                        pass
-                    pass
-                pass
-            pass
+                        elif tests := section.doc.get_tests():
+                            yield Tests(
+                                part.title, chapter.title, section.title, tests
+                            )
         return
 
     def get_uri(self) -> str:
@@ -199,9 +184,7 @@ class Documentation(DjangoDocElement):
             lower_name = name.lower()
             if lower_name.startswith(query):
                 return 0
-            if lower_name in query:
-                return 1
-            return 2
+            return 1 if lower_name in query else 2
 
         def search_sections(section, result):
             for subsection in section.subsections:
@@ -268,14 +251,10 @@ class MathicsMainDocumentation(Documentation):
                                     text,
                                 )
                                 section.subsections.append(subsection)
-                                pass
-                            pass
                         else:
                             section = None
                         if not chapter.doc:
                             chapter.doc = DjangoDoc(pre_text, title, section)
-                        pass
-
                     part.chapters.append(chapter)
                 if file[0].isdigit():
                     self.parts.append(part)
@@ -375,9 +354,7 @@ class MathicsMainDocumentation(Documentation):
                 builtin_part.chapters.append(chapter)
             self.parts.append(builtin_part)
 
-        for part in appendix:
-            self.parts.append(part)
-
+        self.parts.extend(iter(appendix))
         # set keys of tests
         for tests in self.get_tests():
             for test in tests.tests:
